@@ -70,10 +70,10 @@ namespace 'ISO' do
 
 	iso_url = ENV['URL'] || "http://download.grml.org/grml64-small_2013.02.iso"
 	iso_path = ENV['ISO'] || Utils.getfile(iso_url)
-	squashfs = ENV['SQUASHFS'] || "iso_build_dir/live/grml64-small/grml64-small.squashfs"
+	squashfs = ENV['SQUASHFS'] || "iso-build-dir/live/grml64-small/grml64-small.squashfs"
 	squashfs_dir = Utils.getdir(squashfs)
 
-	directory 'iso_build_dir'	
+	directory 'iso-build-dir'	
 
 	desc "Download the Original ISO - (Use ENV['URL'] to specify custom URL)"
 	task :download do
@@ -81,18 +81,18 @@ namespace 'ISO' do
 	end
 
 	desc "Unpack Original ISO (Use ENV['ISO'] to specify custom Filename)"
-	task :unpack => ["iso_build_dir"] do
-		sh "7z x -oiso_build_dir #{iso_path}"
+	task :unpack => ["iso-build-dir"] do
+		sh "7z x -oiso-build-dir #{iso_path}"
 	end
 
-	desc "Pack content of iso_build_dir to bootable ISO"
+	desc "Pack content of iso-build-dir to bootable ISO"
 	task :repack do
-	 	sh "#{isocmd} -l -J -R -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -A 'Razor Microkernel' -sysid 'LINUX' -o grml_mk.iso iso_build_dir"
+	 	sh "#{isocmd} -l -J -R -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -A 'Razor Microkernel' -sysid 'LINUX' -o grml_mk.iso iso-build-dir"
 	end
 
 	desc "Unpack squashfs image from ISO (use ENV['SQUASHFS'] to specify custom path)"
 	task :unsquashfs do
-		sh "unsquashfs #{squashfs} -d #{squashfs_dir}/squashfs-root"
+		sh "unsquashfs -d #{squashfs_dir}/squashfs-root #{squashfs}"
 	end
 
 	desc "Pack squashfs-root"
@@ -103,7 +103,7 @@ namespace 'ISO' do
 	desc "Copy hosts /etc/resolv.conf to chroot"
 	task :resolvconf do
 		mv "#{squashfs_dir}/squashfs-root/etc/resolv.conf", "#{squashfs_dir}/squashfs-root/tmp/resolv.conf"
-		cp "/etc/resolf.conf", "#{squashfs_dir}/squashfs-root/etc/resolv.conf"	
+		cp "/etc/resolv.conf", "#{squashfs_dir}/squashfs-root/etc/resolv.conf"	
 	end
 
 	desc "Restore original resolv.conf in chroot"
@@ -128,6 +128,16 @@ namespace 'ISO' do
 
 	desc "Change Bootloader Timeout"
 	task :grub_timeout do
+
+	end
+
+	desc "Mount special filesystems for chroot"
+	task :chroot_mounts do
+		#sh "mount ..." (proc, dev, sys)
+	end
+	
+	desc "Unmount special chroot filesystems"
+	task :chroot_umounts do
 
 	end
 
