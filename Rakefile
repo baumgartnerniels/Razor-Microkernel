@@ -85,7 +85,16 @@ namespace 'ISO' do
 
 	desc "Pack content of iso-build-dir to bootable ISO"
 	task :repack do
-	 	sh "#{isocmd} -l -J -R -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -A 'Razor Microkernel' -sysid 'LINUX' -o grml_mk.iso iso-build-dir"
+#	 	sh "#{isocmd} -l -J -R -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -A 'Razor Microkernel' -sysid 'LINUX' -o grml_mk.iso iso-build-dir"
+		sh "#{isocmd} -quiet -l -J -R                               \
+    -no-emul-boot -boot-load-size 4 -boot-info-table            \
+    -b boot/isolinux/isolinux.bin                               \
+    -c boot/isolinux/boot.cat                                   \
+    -A 'Razor Microkernel' -sysid 'LINUX'                       \
+    -V "Razor MK"                           \
+    -copyright 'LICENSE'                                        \
+    -o rz_mk.iso iso_build_dir
+
 	end
 
 	desc "Unpack squashfs image from ISO (use ENV['SQUASHFS'] to specify custom path)"
@@ -157,6 +166,11 @@ namespace 'CHROOT' do
 		sh "chroot #{squashfs_root} /tmp/chroot.sh"
 	end
 
+	desc "Remove chroot script"
+	task :rm_chroot_script do
+		rm "#{squashfs_root}/tmp/chroot.sh"
+	end
+
 	desc "Configure rz_mk autostart"
 	task :mk_init do
 
@@ -180,11 +194,15 @@ namespace 'CHROOT' do
 	
 	desc "Prepare chroot environment"
 	task :prepare do
-
+		Rake::Task['CHROOT:resolvconf'].invoke
+		Rake::Task['CHROOT:chroot_script'].invoke
+		Rake::Task['CHROOT:mounts'].invoke
 	end
 
 	desc "Clean chroot environment"
 	task :clean do
-
+		Rake::Task['CHROOT:umounts'].invoke
+		Rake::Task['CHROOT:rm_chroot_script'].invoke
+		Rake::Task['CHROOT:undo_resolvconf'].invoke
 	end
 end
