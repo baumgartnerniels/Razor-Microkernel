@@ -12,8 +12,6 @@ module RazorMicrokernel
     include Singleton
 
     MK_CONF_FILE = '/tmp/mk_conf.yaml'
-    DEF_MK_GEM_MIRROR_URI = "http://localhost:2158/gem-mirror"
-    DEF_MK_GEMLIST_URI = "http://localhost:2158/gem-mirror"
     
     attr_reader :mk_checkin_interval
     attr_reader :mk_checkin_skew
@@ -29,8 +27,6 @@ module RazorMicrokernel
     attr_reader :mk_tce_mirror_uri
     attr_reader :mk_tce_install_list_uri
     attr_reader :mk_kmod_install_list_uri
-    attr_reader :mk_gem_mirror_uri
-    attr_reader :mk_gemlist_uri
 
     def initialize
       @default_mk_log_level = Logger::INFO
@@ -86,16 +82,6 @@ module RazorMicrokernel
       @mk_tce_mirror_uri = mk_conf['mk_tce_mirror_uri']
       @mk_tce_install_list_uri = mk_conf['mk_tce_install_list_uri']
       @mk_kmod_install_list_uri = mk_conf['mk_kmod_install_list_uri']
-      if mk_conf['mk_gem_mirror_uri']
-        @mk_gem_mirror_uri = mk_conf['mk_gem_mirror_uri']
-      else
-        @mk_gem_mirror_uri = DEF_MK_GEM_MIRROR_URI
-      end
-      if mk_conf['mk_gemlist_uri']
-        @mk_gemlist_uri = mk_conf['mk_gemlist_uri']
-      else
-        @mk_gemlist_uri = DEF_MK_GEMLIST_URI
-      end
     end
 
   end

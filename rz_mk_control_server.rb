@@ -19,20 +19,6 @@ require 'razor_microkernel/rz_mk_registration_manager'
 require 'razor_microkernel/rz_mk_fact_manager'
 require 'razor_microkernel/rz_mk_configuration_manager'
 require 'razor_microkernel/rz_mk_kernel_module_manager'
-require 'razor_microkernel/rz_mk_gem_controller'
-
-# load gems in the list available at #{mk_gemlist_uri} from the gem mirror
-# at #{mk_gem_mirror_uri} into the Microkernel (Note; only gems that do not
-# exist yet or gems who's latest version available from the stated gem mirror
-# will be installed; existing versions of these gems will not be reinstalled
-# by this method)
-def load_gems(mk_gem_mirror_uri, mk_gemlist_uri)
-  logger.debug("reloading gems from #{mk_gem_mirror_uri} using list at #{mk_gemlist_uri}")
-  gemController = (RazorMicrokernel::RzMkGemController).instance
-  gemController.gemSource = mk_gem_mirror_uri
-  gemController.gemListURI = mk_gemlist_uri
-  gemController.installListedGems
-end
 
 # file used to track whether or not a node has already checked in
 # at least once (the first time through, this file will contain
@@ -115,9 +101,6 @@ if config_manager.config_file_exists? then
   logger.debug "exclude_pattern = #{exclude_pattern}"
   registration_manager = RazorMicrokernel::RzMkRegistrationManager.new(registration_uri,
                                                                        exclude_pattern, fact_manager)
-
-  # "load" the appropriate gems into the Microkernel
-  load_gems(config_manager.mk_gem_mirror_uri, config_manager.mk_gemlist_uri)
 
 else
 
