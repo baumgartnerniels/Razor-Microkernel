@@ -1,2 +1,4 @@
 /tmp-build-dir
+/*.iso
+/iso-build-dir
 /build-files
