@@ -72,6 +72,7 @@ namespace 'ISO' do
 	iso_path = ENV['ISO'] || Utils.getfile(iso_url)
 	squashfs = ENV['SQUASHFS'] || "iso-build-dir/live/grml64-small/grml64-small.squashfs"
 	squashfs_dir = Utils.getdir(squashfs)
+	squashfs_root = squashfs_dir + "/squashfs-root"
 
 	directory 'iso-build-dir'	
 
@@ -92,7 +93,7 @@ namespace 'ISO' do
 
 	desc "Unpack squashfs image from ISO (use ENV['SQUASHFS'] to specify custom path)"
 	task :unsquashfs do
-		sh "unsquashfs -d #{squashfs_dir}/squashfs-root #{squashfs}"
+		sh "unsquashfs -d #{squashfs_root} #{squashfs}"
 	end
 
 	desc "Pack squashfs-root"
@@ -102,33 +103,57 @@ namespace 'ISO' do
 
 	desc "Copy hosts /etc/resolv.conf to chroot"
 	task :resolvconf do
-		mv "#{squashfs_dir}/squashfs-root/etc/resolv.conf", "#{squashfs_dir}/squashfs-root/tmp/resolv.conf"
-		cp "/etc/resolv.conf", "#{squashfs_dir}/squashfs-root/etc/resolv.conf"	
+		mv "#{squashfs_root}/etc/resolv.conf", "#{squashfs_root}/tmp/resolv.conf"
+		cp "/etc/resolv.conf", "#{squashfs_root}/etc/resolv.conf"	
 	end
 
 	desc "Restore original resolv.conf in chroot"
 	task :undo_resolvconf do
-		mv "#{squashfs_dir}/squashfs-root/tmp/resolv.conf", "#{squashfs_dir}/squashfs-root/etc/resolv.conf"
+		mv "#{squashfs_root}/tmp/resolv.conf", "#{squashfs_root}/etc/resolv.conf"
 	end
 
 	desc "Copy Microkernel scripts"
 	task :cp_mk do
-
+		cp "*.rb", "#{squashfs_root}/usr/local/bin/"
+		cp_r "razor_microkernel", "#{squashfs_root}/usr/lib/ruby/1.8/"
 	end
 
-	desc "Install required packages as listed in packages.list"
-	task :install_packages do
-
+	desc "begin chroot-script"
+	task :chroot_script_start do 
+		File.open("#{squashfs_root}/tmp/chroot.sh", "w+") do |file|
+			file.write "\#!/bin/bash\n"
+		end
+		sh "chmod 755 #{squashfs_root}/tmp/chroot.sh"
 	end
 
-	desc "Istall required gems as listed in gems.list"
-	task :install_gems do
+	desc "Append package isntallation to chroot-script (conf/package.list)"
+	task :chroot_script_packages => ['chroot_script_start'] do
+		File.open("#{squashfs_root}/tmp/chroot.sh", "a+") do |file|
+			file.write "apt-get update\n"
+			file.write "apt-get install -y #{File.open("conf/package.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
+		end
+	end
 
+	desc "Append gem installation to chroot-script (conf/gem.list)"
+	task :chroot_script_gems => ['chroot_script_packages'] do
+	    File.open("#{squashfs_root}/tmp/chroot.sh", "a+") do |file|
+      file.write "gem install #{File.open("conf/gem.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
+    end
+	end
+
+	desc "Finish chroot-script"
+	task :chroot_script_end do
+		
+	end
+
+	desc "Execute chroot-script in chroot"
+	task :chroot => ['chroot_script_end'] do
+		sh ""
 	end
 
 	desc "Change Bootloader Timeout"
 	task :grub_timeout do
-
+		sh "sed 's/set timeout=20/set timeout=3/' iso-build-dir/boot/grub/header.cfg > iso-build-dir/boot/grub/header.cfg"
 	end
 
 	desc "Mount special filesystems for chroot"
@@ -152,7 +177,7 @@ namespace 'ISO' do
 		iso_version = ENV['VER'] || "0.1"
 		mk_version_hash = Hash.new
                 mk_version_hash['mk_version'] = iso_version
-                mk_version_filename = squashfs_dir + File::SEPARATOR + 'tmp' + File::SEPARATOR + 'mk-version.yaml'
+                mk_version_filename = squashfs_root + File::SEPARATOR + 'tmp' + File::SEPARATOR + 'mk-version.yaml'
                 File.open(mk_version_filename, 'w') { |file|
                         YAML::dump(mk_version_hash, file)
                 }
