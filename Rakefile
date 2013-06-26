@@ -62,6 +62,7 @@ end
 desc "Do all the repacking"
 task :repack => ['check_dependencies'] do
 	Rake::Task['ISO:mksquashfs'].invoke
+	Rake::Task['ISO:rm_squashfs_root'].invoke
 	Rake::Task['ISO:repack'].invoke
 end
 
@@ -97,6 +98,11 @@ namespace 'ISO' do
 	desc "Pack squashfs-root"
 	task :mksquashfs do
 		sh "mksquashfs #{squashfs_root} #{squashfs} -noappend -comp xz -b 262144"
+	end
+
+	desc "Remove squashfs-root directory (ATTENTION: Make sure no Filesystems are mounted inside! Maybe run CHROOT:clean)"
+	task :rm_squashfs_root do
+		rm_rf squashfs_root
 	end
 
 	desc "Change Bootloader Timeout"
@@ -149,8 +155,8 @@ namespace 'CHROOT' do
 			file.write "apt-get update\n"
 			file.write "apt-get install -y #{File.open("conf/package.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
       file.write "gem install --no-rdoc --no-ri #{File.open("conf/gem.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
-			file.write "apt-get clean"
-			file.write "rm -rf /var/lib/apt/lists"
+			file.write "apt-get clean\n"
+			file.write "rm -rf /var/lib/apt/lists\n"
 		end
 		sh "chmod 755 #{squashfs_root}/tmp/chroot.sh"
 	end
