@@ -22,6 +22,12 @@ end
 
 #Global definitions
 
+iso_url = ENV['URL'] || "http://download.grml.org/grml64-small_2013.02.iso"
+iso_path = ENV['ISO'] || Utils.getfile(iso_url)
+squashfs = ENV['SQUASHFS'] || "iso-build-dir/live/grml64-small/grml64-small.squashfs"
+squashfs_dir = Utils.getdir(squashfs)
+squashfs_root = squashfs_dir + "/squashfs-root"
+
 dependencies = ['7z', 'unsquashfs', 'mksquashfs', 'wget', 'chroot']
 isocmd = Utils.which('mkisofs') || Utils.which('genisoimage')
 
@@ -43,14 +49,11 @@ desc "Do all the unpacking"
 task :unpack => ['check_dependencies'] do
 	Rake::Task['ISO:unpack'].invoke
 	Rake::Task['ISO:unsquashfs'].invoke
-	Rake::Task['ISO:resolvconf'].invoke
+	Rake::Task['CHROOT:resolvconf'].invoke
 end
 
 desc "Copy/create requred files and install software"
 task :build => ['check_dependencies'] do
-	Rake::Task['ISO:cp_mk'].invoke
-	Rake::Task['ISO:install_packages'].invoke
-	Rake::Task['ISO:install_gems'].invoke
 	Rake::Task['ISO:grub_timeout'].invoke
 	if ENV['DEBUG'] == "yes"
 		Rake::Task['debug_enable']
@@ -59,7 +62,6 @@ end
 
 desc "Do all the repacking"
 task :repack => ['check_dependencies'] do
-	Rake::Task['ISO:undo_resolvconf'].invoke
 	Rake::Task['ISO:mksquashfs'].invoke
 	Rake::Task['ISO:repack'].invoke
 end
@@ -68,11 +70,6 @@ end
 
 namespace 'ISO' do
 
-	iso_url = ENV['URL'] || "http://download.grml.org/grml64-small_2013.02.iso"
-	iso_path = ENV['ISO'] || Utils.getfile(iso_url)
-	squashfs = ENV['SQUASHFS'] || "iso-build-dir/live/grml64-small/grml64-small.squashfs"
-	squashfs_dir = Utils.getdir(squashfs)
-	squashfs_root = squashfs_dir + "/squashfs-root"
 
 	directory 'iso-build-dir'	
 
@@ -101,80 +98,9 @@ namespace 'ISO' do
 		sh "mksquashfs #{squahsfs_dir}/squashfs-root #{squashfs} -noappend -comp xz -b 262144"
 	end
 
-	desc "Copy hosts /etc/resolv.conf to chroot"
-	task :resolvconf do
-		mv "#{squashfs_root}/etc/resolv.conf", "#{squashfs_root}/tmp/resolv.conf"
-		cp "/etc/resolv.conf", "#{squashfs_root}/etc/resolv.conf"	
-	end
-
-	desc "Restore original resolv.conf in chroot"
-	task :undo_resolvconf do
-		mv "#{squashfs_root}/tmp/resolv.conf", "#{squashfs_root}/etc/resolv.conf"
-	end
-
-	desc "Copy Microkernel scripts"
-	task :cp_mk do
-		cp "*.rb", "#{squashfs_root}/usr/local/bin/"
-		cp_r "razor_microkernel", "#{squashfs_root}/usr/lib/ruby/1.8/"
-	end
-
-	desc "begin chroot-script"
-	task :chroot_script_head do 
-		File.open("#{squashfs_root}/tmp/chroot.sh", "w+") do |file|
-			file.write "\#!/bin/bash\n"
-		end
-		sh "chmod 755 #{squashfs_root}/tmp/chroot.sh"
-	end
-
-	desc "Append package isntallation to chroot-script (conf/package.list)"
-	task :chroot_script_packages => ['chroot_script_head'] do
-		File.open("#{squashfs_root}/tmp/chroot.sh", "a+") do |file|
-			file.write "apt-get update\n"
-			file.write "apt-get install -y #{File.open("conf/package.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
-		end
-	end
-
-	desc "Append gem installation to chroot-script (conf/gem.list)"
-	task :chroot_script_gems => ['chroot_script_packages'] do
-	    File.open("#{squashfs_root}/tmp/chroot.sh", "a+") do |file|
-      file.write "gem install #{File.open("conf/gem.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
-    end
-	end
-
-	desc "Finish chroot-script"
-	task :chroot_script_end do
-		
-	end
-
-	desc "Execute chroot-script in chroot"
-	task :chroot => ['chroot_script_end'] do
-		sh "chroot #{squashfs_root} /tmp/chroot.sh"
-	end
-
-	desc "Configure rz_mk autostart"
-	task :mk_init do
-
-	end
-
 	desc "Change Bootloader Timeout"
 	task :grub_timeout do
 		sh "sed 's/set timeout=20/set timeout=3/' iso-build-dir/boot/grub/header.cfg > iso-build-dir/boot/grub/header.cfg"
-	end
-
-	desc "Mount special filesystems for chroot"
-	task :chroot_mounts do
-		sh "mount -t proc proc #{squashfs_root}/proc"
-		sh "mount -t sysfs sys #{squashfs_root}/sys"
-		sh "mount -o bind /dev #{squashfs_root}/dev"
-		sh "mount -t devpts devpts #{squashfs_root}/dev/pts"
-	end
-	
-	desc "Unmount special chroot filesystems"
-	task :chroot_umounts do
-		sh "umount #{squashfs_root}/dev/pts"
-		sh "umount #{squashfs_root}/dev"
-		sh "umount #{squashfs_root}/sys"
-		sh "umount #{squashfs_root}/proc"
 	end
 
 	desc "Build debug image"
@@ -196,3 +122,69 @@ namespace 'ISO' do
 
 end
 
+namespace 'CHROOT' do
+
+	desc "Copy hosts /etc/resolv.conf to chroot"
+	task :resolvconf do
+		mv "#{squashfs_root}/etc/resolv.conf", "#{squashfs_root}/tmp/resolv.conf"
+		cp "/etc/resolv.conf", "#{squashfs_root}/etc/resolv.conf"	
+	end
+
+	desc "Restore original resolv.conf in chroot"
+	task :undo_resolvconf do
+		mv "#{squashfs_root}/tmp/resolv.conf", "#{squashfs_root}/etc/resolv.conf"
+	end
+
+	desc "Copy Microkernel scripts"
+	task :cp_mk do
+		cp "*.rb", "#{squashfs_root}/usr/local/bin/"
+		cp_r "razor_microkernel", "#{squashfs_root}/usr/lib/ruby/1.8/"
+	end
+
+	desc "Generate chroot-script from conf/gem.list and conf/package.list"
+	task :chroot_script => ['chroot_script_head'] do
+		File.open("#{squashfs_root}/tmp/chroot.sh", "w+") do |file|
+			file.write "\#!/bin/bash\n"
+			file.write "apt-get update\n"
+			file.write "apt-get install -y #{File.open("conf/package.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
+      file.write "gem install #{File.open("conf/gem.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
+		end
+		sh "chmod 755 #{squashfs_root}/tmp/chroot.sh"
+	end
+
+	desc "Execute chroot-script in chroot"
+	task :chroot => ['chroot_script'] do
+		sh "chroot #{squashfs_root} /tmp/chroot.sh"
+	end
+
+	desc "Configure rz_mk autostart"
+	task :mk_init do
+
+	end
+
+	desc "Mount special filesystems for chroot"
+	task :mounts do
+		sh "mount -t proc proc #{squashfs_root}/proc"
+		sh "mount -t sysfs sys #{squashfs_root}/sys"
+		sh "mount -o bind /dev #{squashfs_root}/dev"
+		sh "mount -t devpts devpts #{squashfs_root}/dev/pts"
+	end
+	
+	desc "Unmount special chroot filesystems"
+	task :umounts do
+		sh "umount #{squashfs_root}/dev/pts"
+		sh "umount #{squashfs_root}/dev"
+		sh "umount #{squashfs_root}/sys"
+		sh "umount #{squashfs_root}/proc"
+	end
+	
+	desc "Prepare chroot environment"
+	task :prepare do
+
+	end
+
+	desc "Clean chroot environment"
+	task :clean do
+
+	end
+end
