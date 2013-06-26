@@ -49,7 +49,6 @@ desc "Do all the unpacking"
 task :unpack => ['check_dependencies'] do
 	Rake::Task['ISO:unpack'].invoke
 	Rake::Task['ISO:unsquashfs'].invoke
-	Rake::Task['CHROOT:resolvconf'].invoke
 end
 
 desc "Copy/create requred files and install software"
@@ -86,14 +85,7 @@ namespace 'ISO' do
 	desc "Pack content of iso-build-dir to bootable ISO"
 	task :repack do
 #	 	sh "#{isocmd} -l -J -R -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -A 'Razor Microkernel' -sysid 'LINUX' -o grml_mk.iso iso-build-dir"
-		sh "#{isocmd} -quiet -l -J -R                               \
-    -no-emul-boot -boot-load-size 4 -boot-info-table            \
-    -b boot/isolinux/isolinux.bin                               \
-    -c boot/isolinux/boot.cat                                   \
-    -A 'Razor Microkernel' -sysid 'LINUX'                       \
-    -V 'Razor MK'                                               \
-    -copyright 'LICENSE'                                        \
-    -o rz_mk.iso iso_build_dir"
+		sh "#{isocmd} -quiet -l -J -R -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -A 'Razor Microkernel' -sysid 'LINUX' -V 'Razor MK' -o rz_mk.iso iso-build-dir"
 
 	end
 
@@ -104,7 +96,7 @@ namespace 'ISO' do
 
 	desc "Pack squashfs-root"
 	task :mksquashfs do
-		sh "mksquashfs #{squahsfs_dir}/squashfs-root #{squashfs} -noappend -comp xz -b 262144"
+		sh "mksquashfs #{squashfs_root} #{squashfs} -noappend -comp xz -b 262144"
 	end
 
 	desc "Change Bootloader Timeout"
@@ -151,12 +143,14 @@ namespace 'CHROOT' do
 	end
 
 	desc "Generate chroot-script from conf/gem.list and conf/package.list"
-	task :chroot_script => ['chroot_script_head'] do
+	task :chroot_script do
 		File.open("#{squashfs_root}/tmp/chroot.sh", "w+") do |file|
 			file.write "\#!/bin/bash\n"
 			file.write "apt-get update\n"
 			file.write "apt-get install -y #{File.open("conf/package.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
-      file.write "gem install #{File.open("conf/gem.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
+      file.write "gem install --no-rdoc --no-ri #{File.open("conf/gem.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
+			file.write "apt-get clean"
+			file.write "rm -rf /var/lib/apt/lists"
 		end
 		sh "chmod 755 #{squashfs_root}/tmp/chroot.sh"
 	end
