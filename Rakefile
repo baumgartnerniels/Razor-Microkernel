@@ -119,7 +119,7 @@ namespace 'ISO' do
 	end
 
 	desc "begin chroot-script"
-	task :chroot_script_start do 
+	task :chroot_script_head do 
 		File.open("#{squashfs_root}/tmp/chroot.sh", "w+") do |file|
 			file.write "\#!/bin/bash\n"
 		end
@@ -127,7 +127,7 @@ namespace 'ISO' do
 	end
 
 	desc "Append package isntallation to chroot-script (conf/package.list)"
-	task :chroot_script_packages => ['chroot_script_start'] do
+	task :chroot_script_packages => ['chroot_script_head'] do
 		File.open("#{squashfs_root}/tmp/chroot.sh", "a+") do |file|
 			file.write "apt-get update\n"
 			file.write "apt-get install -y #{File.open("conf/package.list", 'r').each_line.to_a.join(" ").delete("\n")}\n"
@@ -148,7 +148,12 @@ namespace 'ISO' do
 
 	desc "Execute chroot-script in chroot"
 	task :chroot => ['chroot_script_end'] do
-		sh ""
+		sh "chroot #{squashfs_root} /tmp/chroot.sh"
+	end
+
+	desc "Configure rz_mk autostart"
+	task :mk_init do
+
 	end
 
 	desc "Change Bootloader Timeout"
@@ -158,12 +163,18 @@ namespace 'ISO' do
 
 	desc "Mount special filesystems for chroot"
 	task :chroot_mounts do
-		#sh "mount ..." (proc, dev, sys)
+		sh "mount -t proc proc #{squashfs_root}/proc"
+		sh "mount -t sysfs sys #{squashfs_root}/sys"
+		sh "mount -o bind /dev #{squashfs_root}/dev"
+		sh "mount -t devpts devpts #{squashfs_root}/dev/pts"
 	end
 	
 	desc "Unmount special chroot filesystems"
 	task :chroot_umounts do
-
+		sh "umount #{squashfs_root}/dev/pts"
+		sh "umount #{squashfs_root}/dev"
+		sh "umount #{squashfs_root}/sys"
+		sh "umount #{squashfs_root}/proc"
 	end
 
 	desc "Build debug image"
