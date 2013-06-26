@@ -91,9 +91,9 @@ namespace 'ISO' do
     -b boot/isolinux/isolinux.bin                               \
     -c boot/isolinux/boot.cat                                   \
     -A 'Razor Microkernel' -sysid 'LINUX'                       \
-    -V "Razor MK"                           \
+    -V 'Razor MK'                                               \
     -copyright 'LICENSE'                                        \
-    -o rz_mk.iso iso_build_dir
+    -o rz_mk.iso iso_build_dir"
 
 	end
 
