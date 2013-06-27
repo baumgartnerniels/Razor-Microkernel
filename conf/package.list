@@ -1,3 +1,5 @@
 ruby1.8
 rubygems
 lshw
+udhcpc
+open-vm-tools
