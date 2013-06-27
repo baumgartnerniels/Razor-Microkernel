@@ -63,7 +63,7 @@ module RazorMicrokernel
           # DHCP request)
           unless nic_has_ip_addr
             puts "no valid IP addresses found; restart DHCP client..."
-            %x[sudo /etc/init.d/services/dhcp stop; sudo /etc/init.d/services/dhcp start]
+            %x[sudo /etc/init.d/dhcp stop; sudo /etc/init.d/dhcp start]
           end
         end
 

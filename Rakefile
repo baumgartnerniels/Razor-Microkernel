@@ -144,6 +144,7 @@ namespace 'CHROOT' do
 		cp_r "razor_microkernel", "#{squashfs_root}/usr/lib/ruby/1.8/"
 		cp "conf/mk_conf.yaml", "#{squashfs_root}/tmp/mk_conf.yaml"
 		cp "conf/first_checkin.yaml", "#{squashfs_root}/tmp/first_checkin.yaml"
+		cp "etc/init.d/dhcp", "#{squashfs_root}/etc/init.d/dhcp"
 	end
 
 	desc "Generate chroot-script from conf/gem.list and conf/package.list"
