@@ -54,9 +54,11 @@ end
 desc "Copy/create requred files and install software"
 task :build => ['check_dependencies'] do
 	Rake::Task['ISO:grub_timeout'].invoke
-	if ENV['DEBUG'] == "yes"
-		Rake::Task['debug_enable']
-	end
+	Rake::Task['CHROOT:prepare'].invoke
+	Rake::Task['CHROOT:chroot'].invoke
+	Rake::Task['CHROOT:clean'].invoke
+	Rake::Task['CHROOT:cp_mk'].invoke
+	Rake::Task['CHROOT:mk_init'].invoke
 end
 
 desc "Do all the repacking"
@@ -107,13 +109,7 @@ namespace 'ISO' do
 
 	desc "Change Bootloader Timeout"
 	task :grub_timeout do
-		sh "sed 's/set timeout=20/set timeout=3/' iso-build-dir/boot/grub/header.cfg > iso-build-dir/boot/grub/header.cfg"
-	end
-
-	desc "Build debug image"
-	task :debug_enable do
-		#enable ssh
-		#request ssh-public-key
+		sh "sed -i.bak 's/set timeout=20/set timeout=3/' iso-build-dir/boot/grub/header.cfg"
 	end
 
 	desc "add ISO version file"
@@ -144,8 +140,10 @@ namespace 'CHROOT' do
 
 	desc "Copy Microkernel scripts"
 	task :cp_mk do
-		cp "*.rb", "#{squashfs_root}/usr/local/bin/"
+		sh "cp *.rb #{squashfs_root}/usr/local/bin/"
 		cp_r "razor_microkernel", "#{squashfs_root}/usr/lib/ruby/1.8/"
+		cp "conf/mk_conf.yaml", "#{squashfs_root}/tmp/mk_conf.yaml"
+		cp "conf/first_checkin.yaml", "#{squashfs_root}/tmp/first_checkin.yaml"
 	end
 
 	desc "Generate chroot-script from conf/gem.list and conf/package.list"
@@ -173,7 +171,14 @@ namespace 'CHROOT' do
 
 	desc "Configure rz_mk autostart"
 	task :mk_init do
-
+		File.open("#{squashfs_root}/etc/init.d/bootlocal.last", "a+") do |file|
+			file.write "# initialize the Microkernel and start a few key services\n\n"
+			file.write "/usr/bin/sethostname box\n"
+			if ENV['DEBUG'] == "yes"
+				file.write "/etc/init.d/ssh start\n"
+			end
+			file.write "/usr/local/bin/rz_mk_init.rb\n"
+		end
 	end
 
 	desc "Mount special filesystems for chroot"
