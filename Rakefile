@@ -59,6 +59,7 @@ task :build => ['check_dependencies'] do
 	Rake::Task['CHROOT:clean'].invoke
 	Rake::Task['CHROOT:cp_mk'].invoke
 	Rake::Task['CHROOT:mk_init'].invoke
+	Rake::Task['ISO:add_version'].invoke
 end
 
 desc "Do all the repacking"
@@ -145,6 +146,7 @@ namespace 'CHROOT' do
 		cp "conf/mk_conf.yaml", "#{squashfs_root}/tmp/mk_conf.yaml"
 		cp "conf/first_checkin.yaml", "#{squashfs_root}/tmp/first_checkin.yaml"
 		cp "etc/init.d/dhcp", "#{squashfs_root}/etc/init.d/dhcp"
+		cp "usr/share/udhcpc/dhcp_mk_config.script", "#{squashfs_root}/etc/udhcpc/"
 	end
 
 	desc "Generate chroot-script from conf/gem.list and conf/package.list"
@@ -174,7 +176,7 @@ namespace 'CHROOT' do
 	task :mk_init do
 		File.open("#{squashfs_root}/etc/init.d/bootlocal.last", "a+") do |file|
 			file.write "# initialize the Microkernel and start a few key services\n\n"
-			file.write "/usr/bin/sethostname box\n"
+			file.write "/bin/hostname box\n"
 			if ENV['DEBUG'] == "yes"
 				file.write "/etc/init.d/ssh start\n"
 			end
