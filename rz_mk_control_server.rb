@@ -195,7 +195,7 @@ loop do
         elsif command == "reboot" then
           # reboots the node, NOW...no sense in logging this since the "filesystem"
           # is all in memory and will disappear when the reboot happens
-          %x[sudo reboot now]
+          %x[sudo reboot -f]
         end
 
         # next, check the configuration that is included in the response...
